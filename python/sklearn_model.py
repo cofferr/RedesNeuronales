@@ -7,7 +7,8 @@ and the same initial weights read from data/.
 Two training modes:
 - ``train_partial_fit``: one ``partial_fit`` call per epoch from the shared initial
   weights. Same trajectory as the C++ code, but timing includes Python per-call overhead.
-- ``train_single_fit``: one ``fit`` call. This is the time comparable with C++.
+- ``train_single_fit``: one ``fit`` call (warm_start from the same initial weights, so the
+  same trajectory). This is the time comparable with C++.
 """
 
 import time
@@ -68,16 +69,36 @@ def train_partial_fit(X, y, epochs: int = config.EPOCHS) -> tuple[MLPClassifier,
     return clf, time.perf_counter() - start
 
 
-def train_single_fit(X, y) -> tuple[MLPClassifier, float]:
-    """One fit() call; it uses its own random init, but the cost per epoch is the same."""
+def prepare_single_fit(X, y) -> MLPClassifier:
+    """A fresh model with the shared initial weights, ready for ONE timed fit() call.
+
+    ``warm_start=True`` makes fit() continue from the weights already in the model instead
+    of re-initializing them, so fit() follows the same trajectory as the C++ code. Setup is
+    kept outside the timed region.
+    """
     clf = build_model(max_iter=config.EPOCHS)
+    clf.set_params(warm_start=True)
+    load_initial_into(clf, X, y)
+    clf.best_loss_ = np.inf
+    clf._no_improvement_count = 0
+    return clf
+
+
+def timed_fit(clf: MLPClassifier, X, y) -> float:
+    """Time exactly one fit() call (the training), return seconds."""
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", ConvergenceWarning)
         start = time.perf_counter()
         clf.fit(X, y)
         elapsed = time.perf_counter() - start
-    assert clf.n_iter_ == config.EPOCHS
-    return clf, elapsed
+    assert clf.n_iter_ == config.EPOCHS and len(clf.loss_curve_) == config.EPOCHS
+    return elapsed
+
+
+def train_single_fit(X, y) -> tuple[MLPClassifier, float]:
+    """One fit() call from the shared initial weights; the time comparable with C++."""
+    clf = prepare_single_fit(X, y)
+    return clf, timed_fit(clf, X, y)
 
 
 def cross_entropy(clf: MLPClassifier, X, y) -> float:

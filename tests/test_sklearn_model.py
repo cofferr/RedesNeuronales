@@ -85,3 +85,12 @@ def test_exported_epoch_reference_matches_fresh_run(split):
     assert np.array_equal(clf.coefs_[1], ref["w2"])
     assert np.array_equal(clf.intercepts_[0], ref["b1"][0])
     assert np.array_equal(clf.intercepts_[1], ref["b2"][0])
+
+
+def test_single_fit_follows_same_trajectory_as_partial_fit(split):
+    X_train, _, y_train, _ = split
+    by_partial, _ = sklearn_model.train_partial_fit(X_train, y_train)
+    by_fit, _ = sklearn_model.train_single_fit(X_train, y_train)
+    assert abs(sklearn_model.cross_entropy(by_partial, X_train, y_train)
+               - sklearn_model.cross_entropy(by_fit, X_train, y_train)) < 1e-12
+    assert np.allclose(by_partial.loss_curve_, by_fit.loss_curve_, atol=1e-12, rtol=0)
