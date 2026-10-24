@@ -56,9 +56,18 @@ To use Qt Creator, open `cpp/CMakeLists.txt`.
 5. Benchmarks (`--no-bench` skips them): interleaved timing blocks and clean-process memory runs, written to `results/benchmark.json`.
 6. Figures (PNG + PDF) in `results/figures/` and the summary table in `results/summary_table.{csv,md}`.
 
+7. `report/` (LaTeX, Spanish): `generated/` holds the macros, tables and code listings produced from the results, and `report_overleaf.zip` (git-ignored) packs the folder for Overleaf.
+
 `nn_eigen` also has `--gradcheck` (numerical gradient check) and runs forward/training checks against scikit-learn when called without arguments.
 Tests: `uv run pytest`.
 
 ## Commits
 
 [Conventional Commits](https://www.conventionalcommits.org/) (`feat`, `fix`, `docs`, `chore`, ...).
+
+## Report
+
+`report/` is self-contained: `main.tex`, `references.bib`, `figures/` (PDF copies) and `generated/`.
+Every number in the text comes from `generated/numbers.tex`, produced by `python/report_data.py` (called by `run_all.py`).
+To compile locally: `cd report && tectonic -X compile main.tex` (or `latexmk -pdf main.tex`).
+For Overleaf, upload `report_overleaf.zip` (created by `run_all.py`) as a new project and use the pdfLaTeX compiler with `main.tex` as the main file.
