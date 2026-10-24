@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[oc]
+*.egg-info
+dist/
+wheels/
+.venv/
+
+# C++ / CMake builds
+build/
+cpp/build/
+CMakeLists.txt.user*
+*.user
+
+# IDEs
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+
+# Outputs (keep the folder, ignore generated files)
+results/*
+!results/.gitkeep
+
+# Course statement PDF (not part of the deliverable)
+/*.pdf
