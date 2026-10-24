@@ -1,0 +1,19 @@
+\begin{tabular}{lp{4.1cm}p{5.6cm}}
+\toprule
+Aspecto & C++ (Eigen) & scikit-learn \\
+\midrule
+Arquitectura & 4--8--3 & \texttt{hidden\_layer\_sizes=(8,)} \\
+Activación oculta & ReLU & \texttt{activation='relu'} \\
+Salida y pérdida & softmax + entropía cruzada media & softmax + log-loss (implícitos) \\
+Optimizador & descenso de gradiente por lote completo & \texttt{solver='sgd'} \\
+Tamaño de lote & 120 & \texttt{batch\_size=120} \\
+Tasa de aprendizaje & 0.1 & \texttt{learning\_rate\_init=0.1}, \texttt{learning\_rate='constant'} \\
+Momentum & no & \texttt{momentum=0.0}, \texttt{nesterovs\_momentum=False} \\
+Regularización $L_2$ & no & \texttt{alpha=0.0} \\
+Orden de las muestras & fijo & \texttt{shuffle=False} \\
+Criterios de parada & ninguno & \texttt{tol=0.0}, \texttt{early\_stopping=False}, \texttt{n\_iter\_no\_change=1001} \\
+Pesos iniciales & CSV compartido & CSV compartido, copiados in situ a coefs\_ \\
+Épocas & 1000 & \texttt{max\_iter} / llamadas a \texttt{partial\_fit} \\
+Precisión numérica & \texttt{double} & \texttt{float64} \\
+\bottomrule
+\end{tabular}

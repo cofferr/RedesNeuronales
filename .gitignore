@@ -25,3 +25,13 @@ results/*
 
 # Course statement PDF (not part of the deliverable)
 /*.pdf
+
+# LaTeX build products and the Overleaf zip (the sources in report/ are versioned)
+report/*.pdf
+report/*.aux
+report/*.log
+report/*.bbl
+report/*.blg
+report/*.out
+report/*.toc
+/report_overleaf.zip

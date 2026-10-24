@@ -4,14 +4,15 @@ import argparse
 import json
 import sys
 
-from python import bench, compare, config, cpp_runner, data, plots, sklearn_model, weights
+from python import (bench, compare, config, cpp_runner, data, plots, report_data, sklearn_model,
+                    weights)
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--no-bench", action="store_true", help="skip the (slower) benchmarks")
     args = parser.parse_args()
-    stages = 7
+    stages = 8
 
     def stage(i: int, name: str) -> None:
         print(f"[{i}/{stages}] {name}")
@@ -60,6 +61,13 @@ def main() -> int:
     written = plots.generate_all()
     print(f"wrote {len(written)} files to {config.RESULTS_DIR.relative_to(config.ROOT)}/ "
           f"(figures/, summary_table.csv, summary_table.md)")
+
+    stage(8, "report data (macros, tables, figures) and Overleaf zip")
+    if args.no_bench:
+        print("skipped: the report needs fresh benchmark results")
+    else:
+        files = report_data.generate()
+        print(f"wrote {len(files)} files to report/; zip: {report_data.make_zip().name}")
     return 0
 
 
