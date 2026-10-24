@@ -9,6 +9,7 @@ RESULTS_DIR = ROOT / "results"
 # Data split
 SEED = 42
 TEST_SIZE = 0.2
+N_TRAIN = 120  # 150 samples * (1 - TEST_SIZE); full-batch size
 
 # Architecture: 4 -> 8 (ReLU) -> 3 (softmax)
 N_FEATURES = 4
