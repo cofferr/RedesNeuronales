@@ -1,6 +1,7 @@
 name,value
 learning_rate,0.1
 epochs,1000
+check_epochs,20
 n_features,4
 n_hidden,8
 n_classes,3

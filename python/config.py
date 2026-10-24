@@ -19,6 +19,7 @@ N_CLASSES = 3
 # Training (plain full-batch gradient descent)
 LEARNING_RATE = 0.1  # final value
 EPOCHS = 1000  # final value
+CHECK_EPOCHS = 20  # short run used to validate the C++ backprop against sklearn
 
 # CSV precision: 17 significant digits round-trips a float64 exactly
 CSV_FLOAT_FORMAT = "%.17g"
@@ -31,6 +32,7 @@ def export_config() -> None:
     rows = {
         "learning_rate": LEARNING_RATE,
         "epochs": EPOCHS,
+        "check_epochs": CHECK_EPOCHS,
         "n_features": N_FEATURES,
         "n_hidden": N_HIDDEN,
         "n_classes": N_CLASSES,

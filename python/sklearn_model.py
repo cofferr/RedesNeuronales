@@ -99,6 +99,26 @@ def export_initial_probabilities() -> None:
         )
 
 
+def export_epoch_reference() -> None:
+    """Export weights and loss curve after CHECK_EPOCHS epochs (C++ backprop reference)."""
+    import pandas as pd
+
+    X_train, _, y_train, _ = data.load_csv()
+    clf, _ = train_partial_fit(X_train, y_train, epochs=config.CHECK_EPOCHS)
+    fmt = config.CSV_FLOAT_FORMAT
+    mats = {
+        "w1": clf.coefs_[0], "b1": clf.intercepts_[0][None, :],
+        "w2": clf.coefs_[1], "b2": clf.intercepts_[1][None, :],
+    }
+    for name, m in mats.items():
+        pd.DataFrame(m).to_csv(
+            config.DATA_DIR / f"ref_epoch_{name}.csv", index=False, header=False, float_format=fmt
+        )
+    pd.DataFrame(
+        {"epoch": range(1, config.CHECK_EPOCHS + 1), "loss": clf.loss_curve_}
+    ).to_csv(config.DATA_DIR / "ref_epoch_loss.csv", index=False, float_format=fmt)
+
+
 def run() -> dict:
     """Train both modes, save the loss curve and a results JSON in results/."""
     import json

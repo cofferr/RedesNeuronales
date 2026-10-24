@@ -20,6 +20,7 @@ def main() -> None:
             config.export_config()
             weights.export_initial_weights()
             sklearn_model.export_initial_probabilities()
+            sklearn_model.export_epoch_reference()
             print("done")
         elif stage == "train scikit-learn model":
             r = sklearn_model.run()

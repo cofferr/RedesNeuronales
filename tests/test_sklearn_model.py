@@ -74,3 +74,14 @@ def test_sklearn_matches_numpy_gradient_descent(loaded_model, split):
     assert np.allclose(loaded_model.coefs_[1], w["w2"], atol=1e-10, rtol=0)
     assert np.allclose(loaded_model.intercepts_[0], w["b1"][0], atol=1e-10, rtol=0)
     assert np.allclose(loaded_model.intercepts_[1], w["b2"][0], atol=1e-10, rtol=0)
+
+
+def test_exported_epoch_reference_matches_fresh_run(split):
+    X_train, _, y_train, _ = split
+    clf, _ = sklearn_model.train_partial_fit(X_train, y_train, epochs=config.CHECK_EPOCHS)
+    ref = {n: np.loadtxt(config.DATA_DIR / f"ref_epoch_{n}.csv", delimiter=",", ndmin=2)
+           for n in weights.NAMES}
+    assert np.array_equal(clf.coefs_[0], ref["w1"])
+    assert np.array_equal(clf.coefs_[1], ref["w2"])
+    assert np.array_equal(clf.intercepts_[0], ref["b1"][0])
+    assert np.array_equal(clf.intercepts_[1], ref["b2"][0])
