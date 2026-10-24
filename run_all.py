@@ -40,6 +40,7 @@ def main() -> int:
     sk_curve, cpp_curve = compare.load_curves()
     print(compare.summary(sk, cpp, sk_curve, cpp_curve))
     problems = compare.find_mismatches(sk, cpp, sk_curve, cpp_curve)
+    problems += compare.prediction_mismatches()
     if problems:
         print("MISMATCH between C++ and scikit-learn:", file=sys.stderr)
         for p in problems:

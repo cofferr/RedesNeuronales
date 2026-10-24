@@ -171,14 +171,18 @@ def _measure_process(cmd: list[str]) -> tuple[dict, int]:
 
 
 def memory(reference: float) -> dict:
-    """Clean processes alternated C++/Python so both see the same machine state."""
+    """Clean processes alternated between sides so both see the same machine state.
+
+    The sklearn peak includes pandas: scikit-learn 1.9.1 imports it itself whenever it is
+    installed (sklearn/utils/fixes.py), and blocking it breaks sklearn, so a pandas-free
+    peak cannot be measured with this version."""
     runs = {"cpp": [], "sklearn": []}
     commands = {
         "cpp": [str(cpp_runner.binary_path()), "--mem", str(config.DATA_DIR)],
         "sklearn": [sys.executable, "-m", "python.bench_worker"],
     }
     for _ in range(MEM_RUNS):
-        for side in ("cpp", "sklearn"):
+        for side in runs:
             own, external_peak = _measure_process(commands[side])
             runs[side].append({**own, "peak_rss_total_bytes": external_peak})
     return {

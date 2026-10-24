@@ -146,6 +146,11 @@ void run_training(const std::string& out_dir, const std::map<std::string, double
     curve << std::setprecision(17) << "epoch,loss\n";
     for (int e = 0; e < epochs; ++e) curve << e + 1 << "," << losses[e] << "\n";
 
+    std::ofstream preds(out_dir + "/cpp_predictions.csv");  // test set: true label, prediction
+    preds << "true,pred\n";
+    const Eigen::VectorXi test_pred = predict(ws_test.probs);
+    for (Eigen::Index i = 0; i < test.y.size(); ++i) preds << test.y(i) << "," << test_pred(i) << "\n";
+
     std::ofstream json(out_dir + "/cpp_results.json");
     json << std::setprecision(17) << "{\n"
          << "  \"epochs\": " << epochs << ",\n"
@@ -156,7 +161,7 @@ void run_training(const std::string& out_dir, const std::map<std::string, double
          << "  \"test_accuracy\": " << test_acc << ",\n"
          << "  \"time_train_s\": " << elapsed.count() << "\n"
          << "}\n";
-    if (!curve || !json) throw std::runtime_error("cannot write results to " + out_dir);
+    if (!curve || !json || !preds) throw std::runtime_error("cannot write results to " + out_dir);
 
     std::cout << "trained " << epochs << " epochs in " << elapsed.count() << " s\n"
               << "train loss " << train_loss << ", acc " << train_acc << "; test loss "

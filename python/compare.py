@@ -52,3 +52,13 @@ def summary(sk: dict, cpp: dict, sk_curve, cpp_curve) -> str:
     if len(sk_curve) == len(cpp_curve):
         lines.append(f"loss curve max |diff|: {float((sk_curve - cpp_curve).abs().max()):.3e}")
     return "\n".join(lines)
+
+
+def prediction_mismatches() -> list[str]:
+    """Test-set predictions of both implementations must be identical."""
+    sk = pd.read_csv(config.RESULTS_DIR / "sklearn_predictions.csv")
+    cpp = pd.read_csv(config.RESULTS_DIR / "cpp_predictions.csv")
+    if not sk["true"].equals(cpp["true"]):
+        return ["test labels differ between sklearn and C++ prediction files"]
+    differing = int((sk["pred"] != cpp["pred"]).sum())
+    return [f"{differing} test predictions differ between sklearn and C++"] if differing else []

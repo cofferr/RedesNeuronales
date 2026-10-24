@@ -166,5 +166,8 @@ def run() -> dict:
         "time_train_s": t_single,
         "time_partial_fit_loop_s": t_partial,
     }
+    pd.DataFrame({"true": y_test, "pred": clf.predict(X_test)}).to_csv(
+        config.RESULTS_DIR / "sklearn_predictions.csv", index=False
+    )
     (config.RESULTS_DIR / "sklearn_results.json").write_text(json.dumps(results, indent=2))
     return results
