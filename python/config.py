@@ -17,8 +17,25 @@ N_HIDDEN = 8
 N_CLASSES = 3
 
 # Training (plain full-batch gradient descent)
-LEARNING_RATE = 0.1
-EPOCHS = 1000
+LEARNING_RATE = 0.1  # final value
+EPOCHS = 1000  # final value
 
 # CSV precision: 17 significant digits round-trips a float64 exactly
 CSV_FLOAT_FORMAT = "%.17g"
+
+CONFIG_CSV = DATA_DIR / "config.csv"
+
+
+def export_config() -> None:
+    """Write the values the C++ binary needs to data/config.csv (single source of truth)."""
+    rows = {
+        "learning_rate": LEARNING_RATE,
+        "epochs": EPOCHS,
+        "n_features": N_FEATURES,
+        "n_hidden": N_HIDDEN,
+        "n_classes": N_CLASSES,
+        "n_train": N_TRAIN,
+    }
+    DATA_DIR.mkdir(exist_ok=True)
+    lines = ["name,value"] + [f"{k},{v!r}" for k, v in rows.items()]
+    CONFIG_CSV.write_text("\n".join(lines) + "\n")

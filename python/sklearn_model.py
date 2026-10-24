@@ -85,6 +85,20 @@ def cross_entropy(clf: MLPClassifier, X, y) -> float:
     return float(-np.log(proba[np.arange(len(y)), y]).mean())
 
 
+def export_initial_probabilities() -> None:
+    """Export sklearn's forward output with the shared initial weights (C++ reference)."""
+    import pandas as pd
+
+    X_train, X_test, y_train, _ = data.load_csv()
+    clf = build_model()
+    load_initial_into(clf, X_train, y_train)
+    for name, X in (("train", X_train), ("test", X_test)):
+        pd.DataFrame(clf.predict_proba(X), columns=["p0", "p1", "p2"]).to_csv(
+            config.DATA_DIR / f"init_proba_{name}.csv", index=False,
+            float_format=config.CSV_FLOAT_FORMAT,
+        )
+
+
 def run() -> dict:
     """Train both modes, save the loss curve and a results JSON in results/."""
     import json

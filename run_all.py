@@ -1,6 +1,6 @@
 """Orchestrate the full pipeline: data export, sklearn, C++ build/run, plots."""
 
-from python import data, sklearn_model, weights
+from python import config, data, sklearn_model, weights
 
 STAGES = [
     "export data",
@@ -17,7 +17,9 @@ def main() -> None:
         print(f"[{i}/{len(STAGES)}] {stage}", end=": ")
         if stage == "export data":
             data.export_csv()
+            config.export_config()
             weights.export_initial_weights()
+            sklearn_model.export_initial_probabilities()
             print("done")
         elif stage == "train scikit-learn model":
             r = sklearn_model.run()
