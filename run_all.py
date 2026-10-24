@@ -4,7 +4,7 @@ import argparse
 import json
 import sys
 
-from python import bench, compare, config, cpp_runner, data, sklearn_model, weights
+from python import bench, compare, config, cpp_runner, data, plots, sklearn_model, weights
 
 
 def main() -> int:
@@ -56,7 +56,10 @@ def main() -> int:
             print(f"error: {exc}", file=sys.stderr)
             return 1
 
-    stage(7, "generate plots and tables: not implemented yet")
+    stage(7, "generate plots and tables")
+    written = plots.generate_all()
+    print(f"wrote {len(written)} files to {config.RESULTS_DIR.relative_to(config.ROOT)}/ "
+          f"(figures/, summary_table.csv, summary_table.md)")
     return 0
 
 
