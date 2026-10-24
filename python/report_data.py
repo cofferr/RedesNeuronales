@@ -11,6 +11,7 @@ Usage: ``uv run python -m python.report_data [--zip]`` (run_all.py calls generat
 import ast
 import json
 import re
+import resource
 import shutil
 import subprocess
 import sys
@@ -19,7 +20,7 @@ from pathlib import Path
 
 import numpy as np
 
-from . import config, cpp_runner, plots, sklearn_model
+from . import bench, config, cpp_runner, plots, sklearn_model
 
 REPORT_DIR = config.ROOT / "report"
 GENERATED_DIR = REPORT_DIR / "generated"
@@ -43,6 +44,8 @@ def sci(value: float, digits: int = 1) -> str:
     if value == 0:
         return r"\ensuremath{0}"
     mantissa, exponent = f"{value:.{digits}e}".split("e")
+    if mantissa == "1":  # exact power of ten
+        return rf"\ensuremath{{10^{{{int(exponent)}}}}}"
     return rf"\ensuremath{{{mantissa}\times10^{{{int(exponent)}}}}}"
 
 
@@ -180,6 +183,11 @@ def build_macros(d: dict, checks: dict, history: list[dict]) -> dict[str, str]:
         "learningRate": str(config.LEARNING_RATE), "nEpochs": str(config.EPOCHS),
         "checkEpochs": str(config.CHECK_EPOCHS), "seedValue": str(config.SEED),
         "testFraction": f"{int(config.TEST_SIZE * 100)}\\%",
+        "testSamplePct": fixed(100 / len(true), 1) + "\\%",
+        "csvDigits": re.search(r"\.(\d+)g", config.CSV_FLOAT_FORMAT).group(1),
+        "lossTol": sci(bench.LOSS_TOL, 0),
+        "pageKB": str(resource.getpagesize() // 1024),
+        **cpp_tolerances(),
         "nParams": str(config.N_FEATURES * config.N_HIDDEN + config.N_HIDDEN
                        + config.N_HIDDEN * config.N_CLASSES + config.N_CLASSES),
         # quality
@@ -237,6 +245,27 @@ def build_macros(d: dict, checks: dict, history: list[dict]) -> dict[str, str]:
         "envPower": tex(env["power_source"] or "n/d"),
     }
     return m
+
+
+def _parse_cpp_constant(text: str, pattern: str, what: str) -> float:
+    match = re.search(pattern, text)
+    if not match:
+        raise RuntimeError(f"could not find {what} in the C++ sources")
+    return float(match.group(1))
+
+
+def cpp_tolerances() -> dict[str, str]:
+    """Tolerances and step size quoted in the text, read from the C++ code itself."""
+    grad = (CPP_DIR / "gradcheck.hpp").read_text()
+    main = (CPP_DIR / "main.cpp").read_text()
+    return {
+        "cppStd": str(int(_parse_cpp_constant(
+            (CPP_DIR.parent / "CMakeLists.txt").read_text(),
+            r"CMAKE_CXX_STANDARD (\d+)", "C++ standard"))),
+        "gradEps": sci(_parse_cpp_constant(grad, r"double eps = ([0-9.e-]+)", "gradcheck eps"), 0),
+        "gradTol": sci(_parse_cpp_constant(grad, r"double tol = ([0-9.e-]+)", "gradcheck tol"), 0),
+        "fwdTol": sci(_parse_cpp_constant(main, r"const double tol = ([0-9.e-]+);", "forward tol"), 0),
+    }
 
 
 def workspace_bytes() -> int:
@@ -349,6 +378,29 @@ def write_tables(d: dict, macros: dict[str, str]) -> None:
         rf"\newcommand{{\locPythonCore}}{{{loc[0][2]}\xspace}}"]) + "\n")
 
 
+# ------------------------------------------------------------------ code listings
+
+def _ascii(text: str) -> str:
+    return text.encode("ascii", "replace").decode().replace("?", "-")
+
+
+def write_listings() -> None:
+    """Extract real source functions so the report shows the code that actually runs."""
+    cpp = (CPP_DIR / "network.hpp").read_text()
+    match = re.search(r"^inline void backward\(.*?^}\n", cpp, re.S | re.M)
+    if not match:
+        raise RuntimeError("backward() not found in network.hpp")
+    _write("listing_backward.cpp", _ascii(match.group(0)))
+
+    source = (PY_DIR / "sklearn_model.py").read_text()
+    for node in ast.walk(ast.parse(source)):
+        if isinstance(node, ast.FunctionDef) and node.name == "build_model":
+            text = "\n".join(source.splitlines()[node.lineno - 1: node.end_lineno]) + "\n"
+            _write("listing_build_model.py", _ascii(text))
+            return
+    raise RuntimeError("build_model() not found")
+
+
 # ------------------------------------------------------------------ figures, zip, entry point
 
 def copy_figures() -> list[Path]:
@@ -371,13 +423,14 @@ def generate() -> list[Path]:
     macros = build_macros(d, run_binary_checks(), history)
     write_numbers(macros)
     write_tables(d, macros)
-    return copy_figures() + sorted(GENERATED_DIR.glob("*.tex"))
+    write_listings()
+    return copy_figures() + sorted(p for p in GENERATED_DIR.iterdir() if p.is_file())
 
 
 def make_zip() -> Path:
     """Zip the self-contained report folder (no build products) for Overleaf."""
     include = [REPORT_DIR / "main.tex", REPORT_DIR / "references.bib"]
-    include += sorted(FIGURES_DIR.glob("*.pdf")) + sorted(GENERATED_DIR.glob("*.tex"))
+    include += sorted(FIGURES_DIR.glob("*.pdf")) + sorted(p for p in GENERATED_DIR.iterdir() if p.is_file())
     with zipfile.ZipFile(ZIP_PATH, "w", zipfile.ZIP_DEFLATED) as z:
         for path in include:
             z.write(path, path.relative_to(REPORT_DIR))
