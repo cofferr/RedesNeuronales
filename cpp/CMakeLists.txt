@@ -15,6 +15,7 @@ find_package(Eigen3 3.4 QUIET NO_MODULE)
 if(NOT Eigen3_FOUND)
   message(STATUS "Eigen3 not found on the system, fetching 3.4.0")
   include(FetchContent)
+  set(FETCHCONTENT_UPDATES_DISCONNECTED ON)  # no network access on rebuilds
   set(EIGEN_BUILD_DOC OFF CACHE BOOL "" FORCE)
   set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
   set(EIGEN_BUILD_PKGCONFIG OFF CACHE BOOL "" FORCE)
@@ -33,4 +34,6 @@ target_link_libraries(nn_eigen PRIVATE Eigen3::Eigen)
 
 # Default data directory (can be overridden with the first command-line argument).
 get_filename_component(PROJECT_DATA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../data" ABSOLUTE)
-target_compile_definitions(nn_eigen PRIVATE PROJECT_DATA_DIR="${PROJECT_DATA_DIR}")
+get_filename_component(PROJECT_RESULTS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../results" ABSOLUTE)
+target_compile_definitions(nn_eigen PRIVATE PROJECT_DATA_DIR="${PROJECT_DATA_DIR}"
+                                            PROJECT_RESULTS_DIR="${PROJECT_RESULTS_DIR}")
