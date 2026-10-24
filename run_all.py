@@ -1,13 +1,17 @@
 """Orchestrate the full pipeline: data export, sklearn, C++ build/run, plots."""
 
+import argparse
 import json
 import sys
 
-from python import compare, config, cpp_runner, data, sklearn_model, weights
+from python import bench, compare, config, cpp_runner, data, sklearn_model, weights
 
 
 def main() -> int:
-    stages = 6
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--no-bench", action="store_true", help="skip the (slower) benchmarks")
+    args = parser.parse_args()
+    stages = 7
 
     def stage(i: int, name: str) -> None:
         print(f"[{i}/{stages}] {name}")
@@ -43,7 +47,15 @@ def main() -> int:
         return 1
     print("C++ and scikit-learn are equivalent")
 
-    stage(6, "generate plots and tables: not implemented yet")
+    stage(6, "benchmarks" + (" (skipped)" if args.no_bench else ""))
+    if not args.no_bench:
+        try:
+            print(bench.summary(bench.run()))
+        except (RuntimeError, cpp_runner.CppError) as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 1
+
+    stage(7, "generate plots and tables: not implemented yet")
     return 0
 
 
