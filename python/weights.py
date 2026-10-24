@@ -6,7 +6,6 @@ with 17 significant digits, so C++ reads exactly the same float64 values.
 """
 
 import numpy as np
-import pandas as pd
 
 from . import config, data
 
@@ -46,6 +45,8 @@ def manual_loss(w: dict[str, np.ndarray], X: np.ndarray, y: np.ndarray) -> float
 
 def export_initial_weights() -> None:
     """Write the initial weights and the reference losses (computed in numpy) to data/."""
+    import pandas as pd  # only needed to export
+
     config.DATA_DIR.mkdir(exist_ok=True)
     w = make_initial_weights()
     for name in NAMES:
@@ -64,11 +65,10 @@ def export_initial_weights() -> None:
 
 def load_initial_weights() -> dict[str, np.ndarray]:
     return {
-        name: pd.read_csv(_path(name), header=None).to_numpy(dtype=np.float64)
-        for name in NAMES
+        name: np.loadtxt(_path(name), delimiter=",", ndmin=2, dtype=np.float64) for name in NAMES
     }
 
 
 def load_reference() -> dict[str, float]:
-    df = pd.read_csv(REFERENCE_CSV)
-    return dict(zip(df["name"], df["value"]))
+    rows = [line.split(",") for line in REFERENCE_CSV.read_text().splitlines()[1:]]
+    return {name: float(value) for name, value in rows}

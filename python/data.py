@@ -1,7 +1,6 @@
 """Load Iris, split into train/test and export the splits to CSV files in data/."""
 
 import numpy as np
-import pandas as pd
 from sklearn.datasets import load_iris
 from sklearn.model_selection import train_test_split
 
@@ -22,7 +21,9 @@ def load_split() -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     return (X_train - mean) / std, (X_test - mean) / std, y_train, y_test
 
 
-def _to_frame(X: np.ndarray, y: np.ndarray) -> pd.DataFrame:
+def _to_frame(X: np.ndarray, y: np.ndarray):
+    import pandas as pd  # only needed to export; keeps loading (and benchmarks) pandas-free
+
     df = pd.DataFrame(X, columns=[f"x{i}" for i in range(X.shape[1])])
     df["label"] = y
     return df
@@ -37,12 +38,11 @@ def export_csv() -> None:
 
 
 def load_csv() -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """Read the exported CSV files (what both implementations train on)."""
-    train, test = pd.read_csv(TRAIN_CSV), pd.read_csv(TEST_CSV)
-    features = [c for c in train.columns if c != "label"]
-    return (
-        train[features].to_numpy(),
-        test[features].to_numpy(),
-        train["label"].to_numpy(),
-        test["label"].to_numpy(),
-    )
+    """Read the exported CSV files (what both implementations train on).
+
+    Plain numpy parsing (correctly rounded float64, like C++ std::stod) and no pandas, so
+    the scikit-learn memory benchmark does not pay for importing it.
+    """
+    train = np.loadtxt(TRAIN_CSV, delimiter=",", skiprows=1)
+    test = np.loadtxt(TEST_CSV, delimiter=",", skiprows=1)
+    return train[:, :-1], test[:, :-1], train[:, -1].astype(int), test[:, -1].astype(int)
