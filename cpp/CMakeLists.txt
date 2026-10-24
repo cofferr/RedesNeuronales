@@ -30,3 +30,7 @@ endif()
 
 add_executable(nn_eigen src/main.cpp)
 target_link_libraries(nn_eigen PRIVATE Eigen3::Eigen)
+
+# Default data directory (can be overridden with the first command-line argument).
+get_filename_component(PROJECT_DATA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../data" ABSOLUTE)
+target_compile_definitions(nn_eigen PRIVATE PROJECT_DATA_DIR="${PROJECT_DATA_DIR}")
