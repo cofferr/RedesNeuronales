@@ -21,3 +21,17 @@ def test_cpp_and_sklearn_test_predictions_are_identical(tmp_path):
     clf, _ = sklearn_model.train_partial_fit(X_train, y_train)
     assert np.array_equal(cpp_pred[:, 0], y_test)
     assert np.array_equal(cpp_pred[:, 1], clf.predict(X_test))
+
+
+def test_training_loop_does_not_allocate():
+    """Preallocated buffers: 1000 epochs must run without any Eigen heap allocation."""
+    import subprocess
+
+    try:
+        binary = cpp_runner.BUILD_DIR / "noalloc_check"
+        assert binary.exists()
+    except AssertionError:
+        pytest.skip("noalloc_check not built")
+    out = subprocess.run([str(binary)], capture_output=True, text=True)
+    assert out.returncode == 0, out.stderr
+    assert "PASS" in out.stdout

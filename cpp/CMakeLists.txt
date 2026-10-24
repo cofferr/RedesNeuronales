@@ -8,7 +8,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
 endif()
-set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
 
 # Use a system Eigen 3.4+ if available, otherwise download it.
 find_package(Eigen3 3.4 QUIET NO_MODULE)
@@ -37,3 +37,9 @@ get_filename_component(PROJECT_DATA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../data" AB
 get_filename_component(PROJECT_RESULTS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../results" ABSOLUTE)
 target_compile_definitions(nn_eigen PRIVATE PROJECT_DATA_DIR="${PROJECT_DATA_DIR}"
                                             PROJECT_RESULTS_DIR="${PROJECT_RESULTS_DIR}")
+
+# Allocation check (run by the tests): asserts must stay enabled here, so -UNDEBUG.
+add_executable(noalloc_check src/noalloc_check.cpp)
+target_link_libraries(noalloc_check PRIVATE Eigen3::Eigen)
+target_compile_options(noalloc_check PRIVATE -UNDEBUG)
+target_compile_definitions(noalloc_check PRIVATE PROJECT_DATA_DIR="${PROJECT_DATA_DIR}")

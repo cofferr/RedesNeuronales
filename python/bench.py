@@ -31,6 +31,7 @@ MEM_RUNS = 5
 LOSS_TOL = 1e-9
 BENCHMARK_JSON = config.RESULTS_DIR / "benchmark.json"
 BLOCK_JSON = config.RESULTS_DIR / "cpp_bench_block.json"
+HISTORY_JSON = config.RESULTS_DIR / "benchmark_history.json"
 
 
 def stats(values: list[float]) -> dict:
@@ -232,7 +233,20 @@ def run() -> dict:
         "memory": memory(reference),
     }
     BENCHMARK_JSON.write_text(json.dumps(result, indent=2))
+    append_history(result)
     return result
+
+
+def append_history(result: dict) -> None:
+    """Keep one line per benchmark run, to show how much the speedup varies between runs."""
+    history = json.loads(HISTORY_JSON.read_text()) if HISTORY_JSON.exists() else []
+    t = result["time_s"]
+    history.append({
+        "cpp_median_s": t["cpp"]["median"],
+        "sklearn_fit_median_s": t["sklearn_fit"]["median"],
+        "speedup_median": t["speedup_median"],
+    })
+    HISTORY_JSON.write_text(json.dumps(history, indent=2))
 
 
 def summary(result: dict) -> str:
