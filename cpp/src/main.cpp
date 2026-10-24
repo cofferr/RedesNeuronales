@@ -11,6 +11,11 @@
 #include <string>
 #include <vector>
 
+#include <sys/resource.h>
+#ifdef __APPLE__
+#include <mach/mach.h>
+#endif
+
 #include "csv.hpp"
 #include "gradcheck.hpp"
 #include "network.hpp"
@@ -158,28 +163,136 @@ void run_training(const std::string& out_dir, const std::map<std::string, double
               << test_loss << ", acc " << test_acc << "\nresults written to " << out_dir << "\n";
 }
 
+// Peak resident set size of this process so far, in bytes.
+// getrusage reports ru_maxrss in BYTES on macOS but in KILOBYTES on Linux.
+std::size_t peak_rss_bytes() {
+    rusage ru{};
+    getrusage(RUSAGE_SELF, &ru);
+#ifdef __APPLE__
+    return static_cast<std::size_t>(ru.ru_maxrss);
+#else
+    return static_cast<std::size_t>(ru.ru_maxrss) * 1024;
+#endif
+}
+
+// Current resident set size in bytes (0 if the platform is not supported).
+std::size_t current_rss_bytes() {
+#ifdef __APPLE__
+    mach_task_basic_info info{};
+    mach_msg_type_number_t count = MACH_TASK_BASIC_INFO_COUNT;
+    if (task_info(mach_task_self(), MACH_TASK_BASIC_INFO, reinterpret_cast<task_info_t>(&info),
+                  &count) != KERN_SUCCESS)
+        return 0;
+    return static_cast<std::size_t>(info.resident_size);
+#else
+    std::ifstream statm("/proc/self/statm");
+    std::size_t pages_total = 0, pages_resident = 0;
+    statm >> pages_total >> pages_resident;
+    return pages_resident * static_cast<std::size_t>(sysconf(_SC_PAGESIZE));
+#endif
+}
+
+template <typename T>
+void write_array(std::ostream& os, const char* key, const std::vector<T>& v) {
+    os << "  \"" << key << "\": [";
+    for (std::size_t i = 0; i < v.size(); ++i) os << (i ? ", " : "") << v[i];
+    os << "]";
+}
+
+// Benchmark: `warmup` discarded + `repeat` measured trainings, all inside this process.
+// Each repetition starts from a copy of the initial weights held in memory (the copy is
+// made outside the timed region), and only the training loop is timed. After each
+// repetition the final train loss is checked against the reference (sklearn).
+void run_bench(const std::string& out_dir, const std::map<std::string, double>& cfg,
+               const Params& init, const Dataset& train, int warmup, int repeat,
+               double ref_loss) {
+    const double lr = cfg.at("learning_rate");
+    const int epochs = static_cast<int>(cfg.at("epochs"));
+    Workspace ws(train.X.rows(), init);
+    Grads g = make_grads(init);
+    std::vector<double> times, final_losses;
+    for (int r = 0; r < warmup + repeat; ++r) {
+        Params p = init;  // reload the initial weights from memory (not timed)
+        const auto start = std::chrono::steady_clock::now();
+        for (int e = 0; e < epochs; ++e) train_epoch(p, train.X, train.y, lr, ws, g);
+        const std::chrono::duration<double> elapsed = std::chrono::steady_clock::now() - start;
+
+        forward(p, train.X, ws);
+        const double loss = cross_entropy(ws.log_probs, train.y);
+        if (std::abs(loss - ref_loss) > 1e-9)
+            throw std::runtime_error("repetition " + std::to_string(r) + ": final loss " +
+                                     std::to_string(loss) + " differs from the reference " +
+                                     std::to_string(ref_loss));
+        if (r >= warmup) {
+            times.push_back(elapsed.count());
+            final_losses.push_back(loss);
+        }
+    }
+    std::filesystem::create_directories(out_dir);
+    std::ofstream json(out_dir + "/cpp_bench_block.json");
+    json << std::setprecision(17) << "{\n"
+         << "  \"eigen_version\": \"" << EIGEN_WORLD_VERSION << "." << EIGEN_MAJOR_VERSION
+         << "." << EIGEN_MINOR_VERSION << "\",\n"
+         << "  \"compiler\": \"" << __VERSION__ << "\",\n"
+         << "  \"warmup\": " << warmup << ",\n"
+         << "  \"repeat\": " << repeat << ",\n";
+    write_array(json, "times_s", times);
+    json << ",\n";
+    write_array(json, "final_train_losses", final_losses);
+    json << "\n}\n";
+    if (!json) throw std::runtime_error("cannot write benchmark block to " + out_dir);
+}
+
+// Memory run (one clean process, one training). Prints one JSON line on stdout.
+// train_increment = growth of the peak RSS during training (high-water mark after minus
+// before), so memory acquired while loading the data is not attributed to training.
+void run_mem(const std::map<std::string, double>& cfg, const Params& init, const Dataset& train) {
+    const double lr = cfg.at("learning_rate");
+    const int epochs = static_cast<int>(cfg.at("epochs"));
+    Params p = init;
+    Workspace ws(train.X.rows(), p);
+    Grads g = make_grads(p);
+    const std::size_t rss_before = current_rss_bytes(), peak_before = peak_rss_bytes();
+    for (int e = 0; e < epochs; ++e) train_epoch(p, train.X, train.y, lr, ws, g);
+    const std::size_t peak_after = peak_rss_bytes();
+    std::cout << "{\"rss_before_train_bytes\": " << rss_before
+              << ", \"peak_before_train_bytes\": " << peak_before
+              << ", \"peak_after_train_bytes\": " << peak_after
+              << ", \"train_increment_bytes\": " << peak_after - peak_before << "}\n";
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
     std::string dir = PROJECT_DATA_DIR;
     std::string out_dir = PROJECT_RESULTS_DIR;
-    bool run_gradcheck = false, run_train = false;
+    bool run_gradcheck = false, run_train = false, run_bench_mode = false, run_mem_mode = false;
+    int repeat = 20, warmup = 2;
+    double ref_loss = std::nan("");
     for (int i = 1; i < argc; ++i) {
         const std::string arg = argv[i];
         if (arg == "--gradcheck") run_gradcheck = true;
         else if (arg == "--train") run_train = true;
+        else if (arg == "--bench") run_bench_mode = true;
+        else if (arg == "--mem") run_mem_mode = true;
+        else if (arg == "--repeat" && i + 1 < argc) repeat = std::stoi(argv[++i]);
+        else if (arg == "--warmup" && i + 1 < argc) warmup = std::stoi(argv[++i]);
+        else if (arg == "--ref-loss" && i + 1 < argc) ref_loss = std::stod(argv[++i]);
         else if (arg == "--out" && i + 1 < argc) out_dir = argv[++i];
         else dir = arg;
     }
     try {
+        // --mem prints a single JSON line, so the usual banner is suppressed in that mode.
+        if (!run_mem_mode)
         std::cout << "Eigen " << EIGEN_WORLD_VERSION << "." << EIGEN_MAJOR_VERSION << "."
                   << EIGEN_MINOR_VERSION << ", data dir: " << dir << "\n";
 
         const auto cfg = csv::read_named_values(dir + "/config.csv");
         const double lr = cfg.at("learning_rate");
         const int check_epochs = static_cast<int>(cfg.at("check_epochs"));
-        std::cout << "learning_rate = " << lr
-                  << ", epochs = " << static_cast<int>(cfg.at("epochs")) << "\n";
+        if (!run_mem_mode)
+            std::cout << "learning_rate = " << lr
+                      << ", epochs = " << static_cast<int>(cfg.at("epochs")) << "\n";
 
         const Dataset train = load_dataset(dir + "/iris_train.csv");
         const Dataset test = load_dataset(dir + "/iris_test.csv");
@@ -191,7 +304,13 @@ int main(int argc, char** argv) {
             throw std::runtime_error("data/weights shapes do not match config.csv");
 
         bool ok = true;
-        if (run_train) {
+        if (run_mem_mode) {
+            run_mem(cfg, init, train);
+        } else if (run_bench_mode) {
+            if (std::isnan(ref_loss)) throw std::runtime_error("--bench needs --ref-loss <value>");
+            run_bench(out_dir, cfg, init, train, warmup, repeat, ref_loss);
+            std::cout << "benchmark block done: " << repeat << " repetitions\n";
+        } else if (run_train) {
             run_training(out_dir, cfg, init, train, test);
         } else if (run_gradcheck) {
             std::cout << "-- gradient check at the initial weights\n";
