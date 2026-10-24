@@ -141,7 +141,8 @@ def run() -> dict:
         "test_loss": cross_entropy(clf, X_test, y_test),
         "train_accuracy": float(clf.score(X_train, y_train)),
         "test_accuracy": float(clf.score(X_test, y_test)),
-        "time_single_fit_s": t_single,
+        # time_train_s is the single fit() time, the one comparable with C++.
+        "time_train_s": t_single,
         "time_partial_fit_loop_s": t_partial,
     }
     (config.RESULTS_DIR / "sklearn_results.json").write_text(json.dumps(results, indent=2))
