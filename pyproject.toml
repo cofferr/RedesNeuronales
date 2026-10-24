@@ -1,0 +1,24 @@
+[project]
+name = "proyectofinal"
+version = "0.1.0"
+description = "Iris neural network: C++ (Eigen) vs Python (scikit-learn) comparison"
+readme = "README.md"
+authors = [
+    { name = "cofferr", email = "juanjo5411@hotmail.com" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "matplotlib>=3.11.2",
+    "numpy>=2.5.4",
+    "pandas>=3.1.0",
+    "scikit-learn>=1.9.1",
+    "seaborn>=0.13.2",
+]
+
+[tool.uv]
+package = false
+
+[dependency-groups]
+dev = [
+    "psutil>=7.2.2",
+]
