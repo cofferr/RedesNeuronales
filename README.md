@@ -353,7 +353,7 @@ Además, al finalizar las ejecuciones se comprueba que:
 La diferencia máxima entre las curvas fue (6.7`\times10`{=tex}\^{-16}),
 cercana a la precisión de punto flotante `float64`.
 
-**Idea para explicar al profesor:** no estamos afirmando que C++ y
+**Explicación:** no estamos afirmando que C++ y
 Python sean idénticos internamente. Estamos demostrando que, para este
 experimento, sus resultados numéricos siguen la misma trayectoria dentro
 de tolerancias extremadamente pequeñas.
@@ -415,7 +415,7 @@ Donde:
 -   (`\eta`{=tex}) es la tasa de aprendizaje (0.1).
 -   (d`\theta`{=tex}) es el gradiente calculado.
 
-**Cómo explicarlo sin memorizar las ecuaciones:** el forward produce una
+**En síntesis:** el forward produce una
 predicción y calcula el error; el backward distribuye ese error hacia
 atrás para saber cómo modificar cada peso; el descenso de gradiente
 aplica esos cambios.
@@ -503,9 +503,6 @@ los pesos iniciales desde el constructor. La solución fue inicializar el
 modelo y sobrescribir sus arreglos `coefs_` e `intercepts_` **in situ**
 con los valores exportados a CSV.
 
-El informe advierte que reemplazar las listas completas sería
-incorrecto, porque el optimizador conserva referencias a los arreglos
-originales.
 
 ## 5.5 ¿Por qué `fit()` con `warm_start=True`?
 
@@ -591,7 +588,7 @@ La diferencia máxima entre las curvas de C++ y scikit-learn es:
 
 En 153 épocas la diferencia fue exactamente cero.
 
-**Qué debemos decir al mostrar la gráfica:** las curvas prácticamente se
+Las curvas prácticamente se
 superponen. Esto es evidencia de que ambas implementaciones están
 ejecutando el mismo proceso de aprendizaje bajo la configuración
 establecida.
@@ -730,4 +727,3 @@ El informe registra:
 **Por qué importa:** los tiempos dependen del hardware, el sistema
 operativo, el compilador, las bibliotecas y la configuración. Para
 reproducir el benchmark hay que considerar el entorno documentado.
-
