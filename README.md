@@ -1,123 +1,123 @@
-# Iris neural network: C++ (Eigen) vs Python (scikit-learn)
+# Red neuronal para Iris: C++ (Eigen) vs Python (scikit-learn)
 
-The same small neural network is implemented twice and compared:
+La misma red neuronal pequeña se implementa dos veces y se compara:
 
-- **C++17 + [Eigen](https://eigen.tuxfamily.org)**: forward and backward propagation written from scratch.
+- **C++17 + [Eigen](https://eigen.tuxfamily.org)**: propagación hacia adelante y hacia atrás escritas desde cero.
 - **Python + [scikit-learn](https://scikit-learn.org)**: `MLPClassifier`.
 
-Final project for *Redes Neuronales* (Universidad Sergio Arboleda).
+Proyecto final de *Redes Neuronales* (Universidad Sergio Arboleda).
 
 | | |
 |---|---|
-| Dataset | Iris: 150 samples, 4 features, 3 classes (stratified 80/20 split, standardized) |
-| Architecture | 4 inputs → 8 hidden neurons (ReLU) → 3 outputs (softmax + cross-entropy) |
-| Training | Full-batch gradient descent; hyperparameters in [python/config.py](python/config.py) |
+| Datos | Iris: 150 muestras, 4 características, 3 clases (partición estratificada 80/20, estandarizada) |
+| Arquitectura | 4 entradas → 8 neuronas ocultas (ReLU) → 3 salidas (softmax + entropía cruzada) |
+| Entrenamiento | Descenso de gradiente con todo el conjunto por época; hiperparámetros en [python/config.py](python/config.py) |
 
-Both versions start from **the same data, the same initial weights and the same hyperparameters**, so they follow the same training trajectory. The pipeline checks this: it fails if the loss curves differ by more than `1e-9` or if the test predictions differ.
+Ambas versiones parten de **los mismos datos, los mismos pesos iniciales y los mismos hiperparámetros**, por lo que siguen la misma trayectoria de entrenamiento. El pipeline lo verifica: falla si las curvas de pérdida difieren en más de `1e-9` o si las predicciones de prueba son distintas.
 
-The comparison covers accuracy, loss, training time, memory, ease of implementation, and pros and cons. The written report is in [report/](report/) (LaTeX, in Spanish).
+La comparación cubre exactitud, pérdida, tiempo de entrenamiento, memoria, facilidad de implementación y ventajas y desventajas. El informe escrito está en [report/](report/) (LaTeX, en español).
 
-## Requirements
+## Requisitos
 
-- [uv](https://docs.astral.sh/uv/) (installs Python 3.14 and the dependencies)
-- CMake ≥ 3.16 and a C++17 compiler
-- Internet access on the first build: CMake downloads Eigen 3.4 unless it is already installed
-- Optional, to compile the report: [tectonic](https://tectonic-typesetting.github.io/) or a LaTeX distribution
+- [uv](https://docs.astral.sh/uv/) (instala Python 3.14 y las dependencias)
+- CMake ≥ 3.16 y un compilador de C++17
+- Conexión a internet en la primera compilación: CMake descarga Eigen 3.4 si no está instalado
+- Opcional, para compilar el informe: [tectonic](https://tectonic-typesetting.github.io/) o una distribución de LaTeX
 
-## Quick start
+## Inicio rápido
 
 ```sh
-uv sync                        # install Python dependencies
-uv run run_all.py              # run the whole pipeline
-uv run run_all.py --no-bench   # same, without the slower benchmarks
-uv run pytest                  # run the tests
+uv sync                        # instala las dependencias de Python
+uv run run_all.py              # ejecuta todo el pipeline
+uv run run_all.py --no-bench   # igual, sin los benchmarks (más lentos)
+uv run pytest                  # ejecuta las pruebas
 ```
 
-## What `uv run run_all.py` does
+## Qué hace `uv run run_all.py`
 
-| # | Stage | Output |
+| # | Etapa | Salida |
 |---|---|---|
-| 1 | Export the split, shared initial weights and reference values | `data/` |
-| 2 | Train scikit-learn (`partial_fit` per epoch for the trajectory, one `fit()` for timing) | `results/sklearn_*` |
-| 3 | Build the C++ project in Release (`cmake`) | `cpp/build/nn_eigen` |
-| 4 | Run the C++ binary (`nn_eigen --train`) | `results/cpp_*` |
-| 5 | Compare C++ vs scikit-learn (loss curves, accuracy, predictions); stops on any mismatch | console |
-| 6 | Benchmarks: interleaved timing blocks and clean-process memory runs | `results/benchmark.json` |
-| 7 | Figures and summary table | `results/figures/`, `results/summary_table.{csv,md}` |
-| 8 | Macros, tables and listings for the report, plus the Overleaf zip | `report/generated/`, `report_overleaf.zip` |
+| 1 | Exporta la partición, los pesos iniciales compartidos y los valores de referencia | `data/` |
+| 2 | Entrena scikit-learn (`partial_fit` por época para la trayectoria, un `fit()` para el tiempo) | `results/sklearn_*` |
+| 3 | Compila el proyecto de C++ en Release (`cmake`) | `cpp/build/nn_eigen` |
+| 4 | Ejecuta el binario de C++ (`nn_eigen --train`) | `results/cpp_*` |
+| 5 | Compara C++ y scikit-learn (curvas de pérdida, exactitud, predicciones); se detiene ante cualquier diferencia | consola |
+| 6 | Benchmarks: bloques de tiempo intercalados y ejecuciones de memoria en procesos limpios | `results/benchmark.json` |
+| 7 | Figuras y tabla resumen | `results/figures/`, `results/summary_table.{csv,md}` |
+| 8 | Macros, tablas y listados del informe, más el zip para Overleaf | `report/generated/`, `report_overleaf.zip` |
 
-Python is the driver; the C++ program is compiled and launched by [python/cpp_runner.py](python/cpp_runner.py) and reads the CSV files that Python wrote to `data/`.
-`--no-bench` skips stages 6 and 8.
+Python dirige el proceso: [python/cpp_runner.py](python/cpp_runner.py) compila y lanza el programa de C++, que lee los CSV que Python escribió en `data/`.
+`--no-bench` omite las etapas 6 y 8.
 
-## Running only the C++ part
+## Ejecutar solo la parte de C++
 
 ```sh
 cmake -B cpp/build -S cpp && cmake --build cpp/build
-cpp/build/nn_eigen --train        # train and write results/cpp_*
-cpp/build/nn_eigen --gradcheck    # numerical gradient check of the backward pass
-cpp/build/nn_eigen                # forward/training checks against scikit-learn
-cpp/build/noalloc_check           # checks that the training loop does not allocate
+cpp/build/nn_eigen --train        # entrena y escribe results/cpp_*
+cpp/build/nn_eigen --gradcheck    # verificación numérica del gradiente
+cpp/build/nn_eigen                # comprobaciones de forward y entrenamiento contra scikit-learn
+cpp/build/noalloc_check           # comprueba que el bucle de entrenamiento no reserva memoria
 ```
 
-`data/` already contains the CSV files, so the C++ program runs without Python. To use Qt Creator, open `cpp/CMakeLists.txt`.
+`data/` ya contiene los CSV, así que el programa de C++ corre sin Python. Para usar Qt Creator, abre `cpp/CMakeLists.txt`.
 
-## Repository structure
+## Estructura del repositorio
 
 ```
 .
-├── run_all.py          Pipeline entry point
-├── pyproject.toml      Python project and dependencies (uv); uv.lock pins versions
-├── python/             Python side: data, sklearn model, C++ runner, benchmarks, plots
-├── cpp/                C++ side: CMakeLists.txt and src/
-├── data/               Train/test CSV files, initial weights, reference values (versioned)
-├── results/            Pipeline outputs and figures (generated, not versioned)
-├── tests/              pytest suite
-└── report/             LaTeX report: main.tex, references.bib, figures/, generated/
+├── run_all.py          Punto de entrada del pipeline
+├── pyproject.toml      Proyecto Python y dependencias (uv); uv.lock fija las versiones
+├── python/             Lado Python: datos, modelo sklearn, ejecutor de C++, benchmarks, gráficas
+├── cpp/                Lado C++: CMakeLists.txt y src/
+├── data/               CSV de entrenamiento y prueba, pesos iniciales, valores de referencia (versionados)
+├── results/            Salidas del pipeline y figuras (se generan, no se versionan)
+├── tests/              Pruebas con pytest
+└── report/             Informe en LaTeX: main.tex, references.bib, figures/, generated/
 ```
 
-## Important files
+## Archivos importantes
 
-Start here to understand the project.
+Para entender el proyecto, empieza por aquí.
 
 **C++** (`cpp/src/`)
 
-| File | Purpose |
+| Archivo | Función |
 |---|---|
-| [network.hpp](cpp/src/network.hpp) | The network: forward pass, backpropagation, gradient-descent step, preallocated buffers |
-| [main.cpp](cpp/src/main.cpp) | Entry point: training loop, command-line modes, timing and memory measurement |
-| [csv.hpp](cpp/src/csv.hpp) | Reads the CSV files |
-| [gradcheck.hpp](cpp/src/gradcheck.hpp) | Compares analytic gradients with numerical ones |
-| [noalloc_check.cpp](cpp/src/noalloc_check.cpp) | Checks that training does no heap allocation in Eigen |
+| [network.hpp](cpp/src/network.hpp) | La red: forward, retropropagación, paso de descenso de gradiente y buffers preasignados |
+| [main.cpp](cpp/src/main.cpp) | Punto de entrada: bucle de entrenamiento, modos de línea de comandos, medición de tiempo y memoria |
+| [csv.hpp](cpp/src/csv.hpp) | Lectura de los CSV |
+| [gradcheck.hpp](cpp/src/gradcheck.hpp) | Compara los gradientes analíticos con los numéricos |
+| [noalloc_check.cpp](cpp/src/noalloc_check.cpp) | Comprueba que el entrenamiento no reserva memoria en Eigen |
 
 **Python** (`python/`)
 
-| File | Purpose |
+| Archivo | Función |
 |---|---|
-| [config.py](python/config.py) | Hyperparameters and paths shared by both versions |
-| [data.py](python/data.py) | Split, standardization and CSV export |
-| [weights.py](python/weights.py) | Shared initial weights |
-| [sklearn_model.py](python/sklearn_model.py) | The scikit-learn model and its reference trajectory |
-| [compare.py](python/compare.py) | C++ vs scikit-learn equivalence check |
-| [cpp_runner.py](python/cpp_runner.py) | Builds and runs the C++ binary from Python |
-| [bench.py](python/bench.py), [bench_worker.py](python/bench_worker.py) | Time and memory benchmarks |
-| [plots.py](python/plots.py) | Figures and summary table |
-| [report_data.py](python/report_data.py) | Generates the report macros, tables and listings, and the Overleaf zip |
+| [config.py](python/config.py) | Hiperparámetros y rutas compartidos por ambas versiones |
+| [data.py](python/data.py) | Partición, estandarización y exportación a CSV |
+| [weights.py](python/weights.py) | Pesos iniciales compartidos |
+| [sklearn_model.py](python/sklearn_model.py) | El modelo de scikit-learn y su trayectoria de referencia |
+| [compare.py](python/compare.py) | Verificación de equivalencia entre C++ y scikit-learn |
+| [cpp_runner.py](python/cpp_runner.py) | Compila y ejecuta el binario de C++ desde Python |
+| [bench.py](python/bench.py), [bench_worker.py](python/bench_worker.py) | Benchmarks de tiempo y memoria |
+| [plots.py](python/plots.py) | Figuras y tabla resumen |
+| [report_data.py](python/report_data.py) | Genera las macros, tablas y listados del informe, y el zip de Overleaf |
 
-## Tests
+## Pruebas
 
-`uv run pytest` covers the C++/scikit-learn equivalence, the no-allocation check, the data and config export, the benchmarks, the plots and the report generation.
-The report test compiles `report/main.tex` and checks that it stays within ten pages; it is skipped if `tectonic` is not installed.
+`uv run pytest` cubre la equivalencia entre C++ y scikit-learn, la comprobación de que no hay reservas de memoria, la exportación de datos y configuración, los benchmarks, las gráficas y la generación del informe.
+La prueba del informe lo compila y comprueba que no pase de diez páginas; se omite si `tectonic` no está instalado.
 
-## Report
+## Informe
 
-`report/` is self-contained. Every number in the text comes from `report/generated/numbers.tex`, produced by [python/report_data.py](python/report_data.py) from the pipeline results.
+`report/` es autocontenido. Cada número del texto sale de `report/generated/numbers.tex`, que produce [python/report_data.py](python/report_data.py) a partir de los resultados del pipeline.
 
 ```sh
-cd report && tectonic -X compile main.tex     # or: latexmk -pdf main.tex
-uv run python -m python.report_data --zip     # report_overleaf.zip, to upload to Overleaf
+cd report && tectonic -X compile main.tex     # o: latexmk -pdf main.tex
+uv run python -m python.report_data --zip     # report_overleaf.zip, para subir a Overleaf
 ```
 
-On Overleaf, use the pdfLaTeX compiler with `main.tex` as the main file.
+En Overleaf, usa el compilador pdfLaTeX con `main.tex` como archivo principal.
 
 ## Commits
 
