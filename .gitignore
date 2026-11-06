@@ -12,9 +12,14 @@ cpp/build/
 CMakeLists.txt.user*
 *.user
 
-# IDEs
+# Test and tool caches
+.pytest_cache/
+.ruff_cache/
+
+# IDEs and assistants
 .idea/
 .vscode/
+.claude/
 
 # OS
 .DS_Store
@@ -34,4 +39,6 @@ report/*.bbl
 report/*.blg
 report/*.out
 report/*.toc
-/report_overleaf.zip
+
+# Zip archives (Overleaf upload, project snapshots)
+*.zip
