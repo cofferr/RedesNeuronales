@@ -15,7 +15,7 @@ Proyecto final de *Redes Neuronales* (Universidad Sergio Arboleda).
 
 Ambas versiones parten de **los mismos datos, los mismos pesos iniciales y los mismos hiperparámetros**, por lo que siguen la misma trayectoria de entrenamiento. El pipeline lo verifica: falla si las curvas de pérdida difieren en más de `1e-9` o si las predicciones de prueba son distintas.
 
-La comparación cubre exactitud, pérdida, tiempo de entrenamiento, memoria, facilidad de implementación y ventajas y desventajas. El informe escrito está en [report/](report/) (LaTeX, en español).
+La comparación cubre exactitud, pérdida, tiempo de entrenamiento, memoria, facilidad de implementación y ventajas y desventajas. El informe escrito está en [report/](report/) (LaTeX, en español); es independiente del código y opcional: si se borra `report/`, `run_all.py` omite esa etapa y las pruebas del informe se omiten.
 
 ## Requisitos
 
@@ -47,7 +47,7 @@ uv run pytest                  # ejecuta las pruebas
 | 8 | Macros, tablas y listados del informe, más el zip para Overleaf | `report/generated/`, `report_overleaf.zip` |
 
 Python dirige el proceso: [python/cpp_runner.py](python/cpp_runner.py) compila y lanza el programa de C++, que lee los CSV que Python escribió en `data/`.
-`--no-bench` omite las etapas 6 y 8.
+`--no-bench` omite las etapas 6 y 8. La etapa 8 también se omite si no existe `report/`.
 
 ## Ejecutar solo la parte de C++
 

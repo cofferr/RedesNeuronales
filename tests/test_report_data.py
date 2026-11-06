@@ -25,7 +25,9 @@ def test_sloc_file_ignores_cpp_comments(tmp_path):
 
 
 needs_results = pytest.mark.skipif(
-    not (config.RESULTS_DIR / "benchmark.json").exists(), reason="run run_all.py first")
+    not (config.RESULTS_DIR / "benchmark.json").exists()
+    or not (report_data.REPORT_DIR / "main.tex").exists(),
+    reason="needs results/ (run run_all.py) and report/")
 
 
 @needs_results

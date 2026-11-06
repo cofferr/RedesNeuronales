@@ -1,8 +1,12 @@
 import re
 
+import pytest
+
 from python import report_data
 
 MAIN = report_data.REPORT_DIR / "main.tex"
+
+pytestmark = pytest.mark.skipif(not MAIN.exists(), reason="report/ is not part of this copy")
 
 
 def prose_without_math(source: str) -> str:

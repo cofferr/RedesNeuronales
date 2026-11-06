@@ -65,6 +65,8 @@ def main() -> int:
     stage(8, "report data (macros, tables, figures) and Overleaf zip")
     if args.no_bench:
         print("skipped: the report needs fresh benchmark results")
+    elif not (report_data.REPORT_DIR / "main.tex").exists():
+        print("skipped: report/ is not part of this copy of the project")
     else:
         files = report_data.generate()
         print(f"wrote {len(files)} files to report/; zip: {report_data.make_zip().name}")
